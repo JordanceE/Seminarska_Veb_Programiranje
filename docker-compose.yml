@@ -1,0 +1,28 @@
+services:
+  accident_scene_db:
+    image: postgres:16
+    container_name: accident_scene_db
+    environment:
+      POSTGRES_DB: accident_scene_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  accident_scene_service:
+    build: .
+    container_name: accident_scene_service
+    depends_on:
+      - accident_scene_db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://accident_scene_db:5432/accident_scene_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      ROADWATCH_AI_SERVICE_URL: http://host.docker.internal:5000
+    ports:
+      - "8080:8080"
+  accident_ai_service:
+    build: ../accident-ai
+    container_name: accident_ai_service
+    ports:
+      - "5000:5000"
