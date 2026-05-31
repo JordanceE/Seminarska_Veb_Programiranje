@@ -30,7 +30,7 @@ class AIAnalysisController(
                 accidentSceneId = id,
                 detectedVehicles = response.cars,
                 confidence = response.confidence,
-                summary = response.ai_summary
+                summary = response.aiSummary
             )
         )
 

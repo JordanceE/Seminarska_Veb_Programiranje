@@ -8,17 +8,8 @@ import com.example.accidentscatchmanagement.domain.enums.RoadLayoutType
 import com.example.accidentscatchmanagement.domain.valueobjects.LocationInfo
 import com.example.accidentscatchmanagement.domain.valueobjects.MeasurementLine
 import com.example.accidentscatchmanagement.domain.valueobjects.VehiclePlacement
-import mk.ukim.finki.accidentscene.domain.events.AIAnalysisStoredEvent
-import mk.ukim.finki.accidentscene.domain.events.AccidentSceneArchivedEvent
-import mk.ukim.finki.accidentscene.domain.events.AccidentSceneCreatedEvent
-import mk.ukim.finki.accidentscene.domain.events.AccidentSceneFinalizedEvent
-import mk.ukim.finki.accidentscene.domain.events.MeasurementAddedEvent
-import mk.ukim.finki.accidentscene.domain.events.MeasurementRemovedEvent
-import mk.ukim.finki.accidentscene.domain.events.RoadLayoutChangedEvent
-import mk.ukim.finki.accidentscene.domain.events.SceneLocationUpdatedEvent
-import mk.ukim.finki.accidentscene.domain.events.VehicleAddedEvent
-import mk.ukim.finki.accidentscene.domain.events.VehicleRemovedEvent
-import mk.ukim.finki.accidentscene.domain.events.VehicleUpdatedEvent
+
+import com.example.accidentscatchmanagement.domain.events.*
 import org.axonframework.commandhandling.CommandHandler
 import org.axonframework.eventsourcing.EventSourcingHandler
 import org.axonframework.modelling.command.AggregateIdentifier
@@ -98,13 +89,40 @@ class AccidentScene {
             )
         )
     }
+    @CommandHandler
+    fun handle(command: StoreFullSceneCommand) {
+        ensureEditable()
+
+        command.vehicles.forEach { it.validate() }
+
+        apply(
+            FullSceneStoredEvent(
+                accidentSceneId = command.accidentSceneId,
+                roadLayoutType = command.roadLayoutType,
+                locationInfo = command.locationInfo,
+                vehicles = command.vehicles,
+                measurements = command.measurements
+            )
+        )
+    }
+
+    @EventSourcingHandler
+    fun on(event: FullSceneStoredEvent) {
+        roadLayoutType = event.roadLayoutType
+        locationInfo = event.locationInfo
+        vehicles.clear()
+        vehicles.addAll(event.vehicles)
+        measurements.clear()
+        measurements.addAll(event.measurements)
+        updatedAt = event.occurredAt
+    }
 
     @CommandHandler
     fun handle(command: AddVehicleCommand) {
         ensureEditable()
 
         require(command.vehicle.name.isNotBlank()) {
-            "Vehicle name cannot be blank"
+            command.vehicle.validate()
         }
 
         require(vehicles.none { it.vehicleId == command.vehicle.vehicleId }) {

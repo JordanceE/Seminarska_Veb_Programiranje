@@ -32,7 +32,7 @@ data class VehiclePlacement(
     var flipped: Boolean = false,
     var note: String? = null
 ) {
-    init {
+    fun validate() {
         require(name.isNotBlank()) { "Vehicle name cannot be blank" }
         require(width > 0) { "Vehicle width must be positive" }
         require(height > 0) { "Vehicle height must be positive" }

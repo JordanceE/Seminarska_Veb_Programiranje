@@ -1,4 +1,4 @@
-package mk.ukim.finki.accidentscene.domain.events
+package com.example.accidentscatchmanagement.domain.events
 
 import com.example.accidentscatchmanagement.domain.enums.RoadLayoutType
 import com.example.accidentscatchmanagement.domain.valueobjects.LocationInfo
@@ -63,7 +63,14 @@ data class AIAnalysisStoredEvent(
     val summary: String?,
     val occurredAt: LocalDateTime = LocalDateTime.now()
 )
-
+data class FullSceneStoredEvent(
+    val accidentSceneId: String,
+    val roadLayoutType: RoadLayoutType,
+    val locationInfo: LocationInfo,
+    val vehicles: List<VehiclePlacement>,
+    val measurements: List<MeasurementLine>,
+    val occurredAt: LocalDateTime = LocalDateTime.now()
+)
 data class AccidentSceneFinalizedEvent(
     val accidentSceneId: String,
     val occurredAt: LocalDateTime = LocalDateTime.now()

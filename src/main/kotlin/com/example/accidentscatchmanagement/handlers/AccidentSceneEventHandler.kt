@@ -1,10 +1,10 @@
 package com.example.accidentscatchmanagement.handlers
 
 import com.example.accidentscatchmanagement.domain.events.*
-import mk.ukim.finki.accidentscene.domain.events.AccidentSceneCreatedEvent
-import mk.ukim.finki.accidentscene.domain.events.RoadLayoutChangedEvent
-import mk.ukim.finki.accidentscene.domain.events.SceneLocationUpdatedEvent
-import mk.ukim.finki.accidentscene.domain.events.*
+import com.example.accidentscatchmanagement.domain.events.AccidentSceneCreatedEvent
+import com.example.accidentscatchmanagement.domain.events.RoadLayoutChangedEvent
+import com.example.accidentscatchmanagement.domain.events.SceneLocationUpdatedEvent
+import com.example.accidentscatchmanagement.domain.events.*
 import org.axonframework.eventhandling.EventHandler
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

@@ -14,4 +14,5 @@ interface AccidentSceneCommandService {
     fun storeAIAnalysis(command: StoreAIAnalysisCommand)
     fun finalizeScene(command: FinalizeAccidentSceneCommand)
     fun archiveScene(command: ArchiveAccidentSceneCommand)
+    fun storeFullScene(command: StoreFullSceneCommand)
 }

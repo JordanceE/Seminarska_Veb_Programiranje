@@ -20,7 +20,14 @@ data class ChangeRoadLayoutCommand(
     val accidentSceneId: String,
     val roadLayoutType: RoadLayoutType
 )
-
+data class StoreFullSceneCommand(
+    @TargetAggregateIdentifier
+    val accidentSceneId: String,
+    val roadLayoutType: RoadLayoutType,
+    val locationInfo: LocationInfo,
+    val vehicles: List<VehiclePlacement>,
+    val measurements: List<MeasurementLine>
+)
 data class UpdateSceneLocationCommand(
     @TargetAggregateIdentifier
     val accidentSceneId: String,

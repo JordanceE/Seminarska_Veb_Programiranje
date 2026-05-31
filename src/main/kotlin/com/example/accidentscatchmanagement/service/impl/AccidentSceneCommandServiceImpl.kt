@@ -54,4 +54,7 @@ class AccidentSceneCommandServiceImpl(
     override fun archiveScene(command: ArchiveAccidentSceneCommand) {
         commandGateway.sendAndWait<Any>(command)
     }
+    override fun storeFullScene(command: StoreFullSceneCommand) {
+        commandGateway.sendAndWait<Any>(command)
+    }
 }

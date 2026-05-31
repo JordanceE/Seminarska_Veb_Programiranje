@@ -1,7 +1,7 @@
 package com.example.accidentscatchmanagement.handlers
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import mk.ukim.finki.accidentscene.domain.events.AccidentSceneFinalizedEvent
+import com.example.accidentscatchmanagement.domain.events.AccidentSceneFinalizedEvent
 import org.axonframework.eventhandling.EventHandler
 import org.springframework.context.annotation.Profile
 import org.springframework.kafka.core.KafkaTemplate
