@@ -3,6 +3,7 @@ package com.example.accidentscatchmanagement.domain
 import com.example.accidentscatchmanagement.domain.enums.SceneStatus
 import jakarta.persistence.*
 import com.example.accidentscatchmanagement.domain.commands.*
+import com.example.accidentscatchmanagement.domain.enums.MeasurementType
 import com.example.accidentscatchmanagement.domain.enums.RoadLayoutType
 
 import com.example.accidentscatchmanagement.domain.valueobjects.LocationInfo
@@ -17,7 +18,7 @@ import org.axonframework.spring.stereotype.Aggregate
 import org.axonframework.modelling.command.AggregateLifecycle.apply
 import java.time.LocalDateTime
 
-@Aggregate
+@Aggregate(repository = "axonAccidentSceneRepository")
 @Entity
 @Table(name = "accident_scene")
 class AccidentScene {
@@ -41,14 +42,16 @@ class AccidentScene {
     var createdAt: LocalDateTime = LocalDateTime.now()
     var updatedAt: LocalDateTime = LocalDateTime.now()
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
         name = "accident_scene_vehicles",
         joinColumns = [JoinColumn(name = "accident_scene_id")]
     )
+    @OrderColumn(name = "vehicle_order")
     var vehicles: MutableList<VehiclePlacement> = mutableListOf()
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @OrderColumn(name = "measurement_order")
     @CollectionTable(
         name = "accident_scene_measurements",
         joinColumns = [JoinColumn(name = "accident_scene_id")]
@@ -94,7 +97,75 @@ class AccidentScene {
         ensureEditable()
 
         command.vehicles.forEach { it.validate() }
+        val vehicleIds =
+            command.vehicles
+                .map { it.vehicleId }
+                .toSet()
+        require(vehicleIds.size == command.vehicles.size) {
+            "Vehicle IDs must be unique"
+        }
+        val measurementIds =
+            command.measurements
+                .map { it.measurementId }
+        require(measurementIds.distinct().size == measurementIds.size) {
+            "Measurement IDs must be unique"
+        }
+        command.measurements.forEach { measurement ->
+            require(measurement.x1.isFinite()) {
+                "Measurement x1 must be finite"
+            }
 
+            require(measurement.y1.isFinite()) {
+                "Measurement y1 must be finite"
+            }
+
+            require(measurement.x2.isFinite()) {
+                "Measurement x2 must be finite"
+            }
+
+            require(measurement.y2.isFinite()) {
+                "Measurement y2 must be finite"
+            }
+
+            require(
+                measurement.lengthMeters.isFinite() &&
+                        measurement.lengthMeters >= 0.0
+            ) {
+                "Measurement length must be a finite non-negative number"
+            }
+
+            measurement.fromVehicleId?.let {
+                require(it in vehicleIds) {
+                    "Measurement references missing source vehicle $it"
+                }
+            }
+
+            measurement.toVehicleId?.let {
+                require(it in vehicleIds) {
+                    "Measurement references missing target vehicle $it"
+                }
+            }
+
+            if (
+                measurement.type ==
+                MeasurementType.VEHICLE_TO_VEHICLE
+            ) {
+                require(measurement.fromVehicleId != null) {
+                    "Vehicle-to-vehicle measurement requires a source vehicle"
+                }
+
+                require(measurement.toVehicleId != null) {
+                    "Vehicle-to-vehicle measurement requires a target vehicle"
+                }
+
+                require(
+                    measurement.fromVehicleId !=
+                            measurement.toVehicleId
+                ) {
+                    "A vehicle cannot be measured to itself"
+                }
+            }
+        }
         apply(
             FullSceneStoredEvent(
                 accidentSceneId = command.accidentSceneId,
@@ -121,9 +192,9 @@ class AccidentScene {
     fun handle(command: AddVehicleCommand) {
         ensureEditable()
 
-        require(command.vehicle.name.isNotBlank()) {
-            command.vehicle.validate()
-        }
+
+        command.vehicle.validate()
+
 
         require(vehicles.none { it.vehicleId == command.vehicle.vehicleId }) {
             "Vehicle with id ${command.vehicle.vehicleId} already exists"
@@ -140,7 +211,7 @@ class AccidentScene {
     @CommandHandler
     fun handle(command: UpdateVehicleCommand) {
         ensureEditable()
-
+        command.vehicle.validate()
         require(vehicles.any { it.vehicleId == command.vehicleId }) {
             "Vehicle with id ${command.vehicleId} does not exist"
         }
@@ -173,10 +244,24 @@ class AccidentScene {
     @CommandHandler
     fun handle(command: AddMeasurementCommand) {
         ensureEditable()
+        require(
+            measurements.none {
+                it.measurementId ==
+                        command.measurement.measurementId
+            }
+        ) {
+            "Measurement with id ${command.measurement.measurementId} already exists"
+        }
 
-        if (command.measurement.fromVehicleId != null) {
-            require(vehicles.any { it.vehicleId == command.measurement.fromVehicleId }) {
-                "Measurement references a vehicle that does not exist"
+        command.measurement.fromVehicleId?.let { vehicleId ->
+            require(vehicles.any { it.vehicleId == vehicleId }) {
+                "Measurement references a source vehicle that does not exist"
+            }
+        }
+
+        command.measurement.toVehicleId?.let { vehicleId ->
+            require(vehicles.any { it.vehicleId == vehicleId }) {
+                "Measurement references a target vehicle that does not exist"
             }
         }
 
@@ -212,6 +297,7 @@ class AccidentScene {
             AIAnalysisStoredEvent(
                 accidentSceneId = command.accidentSceneId,
                 detectedVehicles = command.detectedVehicles,
+                measurements = command.measurements,
                 confidence = command.confidence,
                 summary = command.summary
             )
@@ -276,15 +362,30 @@ class AccidentScene {
 
     @EventSourcingHandler
     fun on(event: VehicleUpdatedEvent) {
-        vehicles.removeIf { it.vehicleId == event.vehicleId }
-        vehicles.add(event.vehicle)
+        val vehicleIndex =
+            vehicles.indexOfFirst {
+                it.vehicleId == event.vehicleId
+            }
+
+        if (vehicleIndex >= 0) {
+            vehicles[vehicleIndex] =
+                event.vehicle
+        }
+
         updatedAt = event.occurredAt
     }
 
     @EventSourcingHandler
     fun on(event: VehicleRemovedEvent) {
-        vehicles.removeIf { it.vehicleId == event.vehicleId }
-        measurements.removeIf { it.fromVehicleId == event.vehicleId }
+        vehicles.removeIf {
+            it.vehicleId == event.vehicleId
+        }
+
+        measurements.removeIf {
+            it.fromVehicleId == event.vehicleId ||
+                    it.toVehicleId == event.vehicleId
+        }
+
         updatedAt = event.occurredAt
     }
 
@@ -304,12 +405,24 @@ class AccidentScene {
     fun on(event: AIAnalysisStoredEvent) {
         vehicles.clear()
         vehicles.addAll(event.detectedVehicles)
+
+        /*
+         * AI analysis replaces vehicle-linked measurements because
+         * the detected vehicles receive new IDs. Pure point-to-point
+         * measurements are retained.
+         */
+        measurements.removeIf {
+            it.fromVehicleId != null ||
+                    it.toVehicleId != null
+        }
+
+        measurements.addAll(event.measurements)
+
         aiConfidence = event.confidence
         aiSummary = event.summary
         status = SceneStatus.AI_ANALYZED
         updatedAt = event.occurredAt
     }
-
     @EventSourcingHandler
     fun on(event: AccidentSceneFinalizedEvent) {
         status = SceneStatus.FINALIZED

@@ -59,6 +59,7 @@ data class MeasurementRemovedEvent(
 data class AIAnalysisStoredEvent(
     val accidentSceneId: String,
     val detectedVehicles: List<VehiclePlacement>,
+    val measurements: List<MeasurementLine> = emptyList(),
     val confidence: Double?,
     val summary: String?,
     val occurredAt: LocalDateTime = LocalDateTime.now()
@@ -68,7 +69,7 @@ data class FullSceneStoredEvent(
     val roadLayoutType: RoadLayoutType,
     val locationInfo: LocationInfo,
     val vehicles: List<VehiclePlacement>,
-    val measurements: List<MeasurementLine>,
+    val measurements: List<MeasurementLine> = emptyList(),
     val occurredAt: LocalDateTime = LocalDateTime.now()
 )
 data class AccidentSceneFinalizedEvent(

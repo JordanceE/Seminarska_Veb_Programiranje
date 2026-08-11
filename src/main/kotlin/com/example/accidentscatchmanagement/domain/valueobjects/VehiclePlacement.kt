@@ -30,12 +30,18 @@ data class VehiclePlacement(
     var rotation: Double = 0.0,
     var scale: Double = 1.0,
     var flipped: Boolean = false,
-    var note: String? = null
+    var note: String? = null,
+    var confidence: Double? = null
 ) {
     fun validate() {
         require(name.isNotBlank()) { "Vehicle name cannot be blank" }
         require(width > 0) { "Vehicle width must be positive" }
         require(height > 0) { "Vehicle height must be positive" }
         require(scale > 0) { "Vehicle scale must be positive" }
+        confidence?.let {
+            require(it in 0.0..1.0) {
+                "Vehicle confidence must be between 0.0 and 1.0"
+            }
+        }
     }
 }

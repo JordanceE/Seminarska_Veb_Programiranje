@@ -26,7 +26,7 @@ data class StoreFullSceneCommand(
     val roadLayoutType: RoadLayoutType,
     val locationInfo: LocationInfo,
     val vehicles: List<VehiclePlacement>,
-    val measurements: List<MeasurementLine>
+    val measurements: List<MeasurementLine> = emptyList()
 )
 data class UpdateSceneLocationCommand(
     @TargetAggregateIdentifier
@@ -69,6 +69,7 @@ data class StoreAIAnalysisCommand(
     @TargetAggregateIdentifier
     val accidentSceneId: String,
     val detectedVehicles: List<VehiclePlacement>,
+    val measurements: List<MeasurementLine> = emptyList(),
     val confidence: Double?,
     val summary: String?
 )
