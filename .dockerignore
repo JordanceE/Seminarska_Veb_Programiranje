@@ -1,0 +1,6 @@
+.git
+.idea
+target
+AccidentProject
+**/.venv
+**/__pycache__

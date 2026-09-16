@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Forensic Reconstruction Tool</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <nav id="mainTabs">
+  <button type="button" id="editorTab" class="tabButton active">
+    Accident Scene Editor
+  </button>
+
+  <button id="savedScenesTab" type="button" class="tabButton">
+    Saved Accident Scenes
+  </button>
+  <button id="savedLocationsTab" type="button" class="tabButton">Saved Locations</button>
+  <button id="addLocationTab" type="button" class="tabButton">Add Location</button>
+</nav>
+  <div id="app">
+
+    <div id="locationPanel">
+
+      <h3>Accident Scene</h3>
+      <label for="sceneFileName">Accident file name</label>
+      <input id="sceneFileName" maxlength="255" placeholder="scene_01">
+      <p class="hint">Used as this accident's name in Saved Accident Scenes.</p>
+
+      <h3>Location</h3>
+      <label for="editorLocationSearch">Find a saved location</label>
+      <input id="editorLocationSearch" type="search" placeholder="Search locations by name">
+      <select id="editorLocationSelect" aria-label="Saved location"><option value="">Enter details manually</option></select>
+      <button id="editorLocationsMore" type="button" hidden>More locations</button>
+      <p id="editorLocationMessage" class="hint" role="status">Choose a location to fill the fields below.</p>
+      <label for="editorLocationPhoto">Location picture (PNG or JPEG)</label>
+      <input id="editorLocationPhoto" type="file" accept="image/png,image/jpeg">
+      <button id="saveLocationFromEditor" type="button">Save location template</button>
+      <button id="clearLocationSelection" type="button">Use edited details as a template</button>
+
+      <div class="locationMeta">
+
+        <div class="locationMetaRow">
+          <label>Location name</label>
+          <input id="locName" placeholder="Leninova intersection">
+        </div>
+
+        <div class="locationMetaRow">
+          <label>Description</label>
+          <textarea id="locDesc" placeholder="Short description of the location"></textarea>
+        </div>
+
+      </div>
+
+      <h4>Top Street</h4>
+      <p class="hint">Street entering the intersection from TOP</p>
+
+      <div class="locationBlock">
+
+        <div class="locationRow">
+          <label>Width</label>
+          <input id="topWidth">
+        </div>
+
+        <div class="locationRow">
+          <label>Lanes</label>
+          <input id="topLane">
+        </div>
+
+      </div>
+
+      <h4>Bottom Street</h4>
+      <p class="hint">Street entering the intersection from BOTTOM</p>
+
+      <div class="locationBlock">
+
+        <div class="locationRow">
+          <label>Width</label>
+          <input id="bottomWidth">
+        </div>
+
+        <div class="locationRow">
+          <label>Lanes</label>
+          <input id="bottomLane">
+        </div>
+
+      </div>
+
+      <h4>Right Street</h4>
+      <p class="hint">Street entering the intersection from RIGHT</p>
+
+      <div class="locationBlock">
+
+        <div class="locationRow">
+          <label>Width</label>
+          <input id="rightWidth">
+        </div>
+
+        <div class="locationRow">
+          <label>Lanes</label>
+          <input id="rightLane">
+        </div>
+
+      </div>
+
+      <h4>Left Street</h4>
+      <p class="hint">Street entering the intersection from LEFT</p>
+
+      <div class="locationBlock">
+
+        <div class="locationRow">
+          <label>Width</label>
+          <input id="leftWidth">
+        </div>
+
+        <div class="locationRow">
+          <label>Lanes</label>
+          <input id="leftLane">
+        </div>
+
+      </div>
+
+      <h4>Roundabout</h4>
+      Diameter (m)
+      <input id="roundDiameter">
+
+      <h4>T-Junction</h4>
+      <input id="tjunctionCheck" type="checkbox">
+
+    </div>
+
+    <div id="canvasContainer">
+      <canvas id="cityCanvas"></canvas>
+    </div>
+
+    <div id="controlPanel">
+
+      <h3>AI Scene Detection</h3>
+
+      <label class="uploadBtn">
+        Choose Image
+        <input type="file" id="imageUpload" hidden>
+      </label>
+      <button id="analyzeBtn" class="aiBtn aiAnalyze">Analyze with AI</button>
+      <button id="downloadAIJsonBtn" class="aiBtn aiDownload">Преземи AI JSON</button>
+      <button id="editModeBtn" class="aiBtn aiEdit">Switch to AI Mode</button>
+      <p id="sceneModeStatus" class="hint" role="status">Current mode: Edit</p>
+
+      <div id="aiPreviewContainer">
+        <img id="aiPreview" />
+      </div>
+
+      <hr>
+
+      <select id="sceneType">
+        <option value="glavnaulica.png">Four-way Intersection</option>
+        <option value="roundabout-3-exits.png">Roundabout — 3 Exits, 1 Lane</option>
+        <option value="roundabout-3-exits-2-lanes.png">Roundabout — 3 Exits, 2 Lanes</option>
+        <option value="roundabout-4-way-1-lanes.png">Roundabout — 4 Exits, 1 Lane</option>
+        <option value="roundabout-4-way-2-lanes.png">Roundabout — 4 Exits, 2 Lanes</option>
+        <option value="t-junction.png">T-Junction</option>
+        <option value="boulevard_2_full_lines.png">Boulevard — Solid Median</option>
+        <option value="boulevard_tree_line.png">Boulevard — Tree-Lined Median</option>
+      </select>
+
+      <hr>
+
+      <h2>Add Vehicle</h2>
+      <div id="vehicleList"></div>
+      <div class="vehicleGrid">
+        <button class="vehicleBtn" data-type="hatchback">Hatchback</button>
+        <button class="vehicleBtn" data-type="sedan">Sedan</button>
+        <button class="vehicleBtn" data-type="coupe">Coupe</button>
+        <button class="vehicleBtn" data-type="wagon">Wagon</button>
+        <button class="vehicleBtn" data-type="suv">SUV</button>
+        <button class="vehicleBtn" data-type="mpv">Minivan</button>
+        <button class="vehicleBtn" data-type="pickup">Pickup</button>
+        <button class="vehicleBtn" data-type="van">Van</button>
+        <button class="vehicleBtn" data-type="truck">Truck</button>
+        <button class="vehicleBtn" data-type="motorcycle">Motorcycle</button>
+        <button class="vehicleBtn" data-type="bus">Bus</button>
+      </div>
+
+      <hr>
+
+      <button id="measureBtn">Measure Mode</button>
+      <h3>Measurements (meters)</h3>
+      <div id="measureList"></div>
+      <button id="undoBtn">Undo (Ctrl+Z)</button>
+      <button id="redoBtn">Redo (Ctrl+Y)</button>
+      <button id="resetBtn">Reset Scene</button>
+      <button id="deleteVehicleBtn">Delete Vehicle (DEL)</button>
+      <hr>
+
+      <h3>Rotate / Resize</h3>
+      <button id="flipVehicleBtn">Flip 180°</button>
+
+      <div class="toolRow">
+
+        <button id="rotateLeftBtn">⟲</button>
+        <button id="rotateRightBtn">⟳</button>
+        <button id="resizePlusBtn">+</button>
+        <button id="resizeMinusBtn">−</button>
+
+      </div>
+
+      <label>Rotation Angle (°)</label>
+
+      <div class="rotateRow">
+
+        <input type="range" id="rotateSlider" min="0" max="360" step="1" value="0">
+
+        <input id="angleInput" type="number" min="0" max="360">
+
+      </div>
+
+      <label>Vehicle Size</label>
+
+      <div class="sizeRow">
+
+        <input type="range" id="scaleSlider" min="0.5" max="3" step="0.01" value="1">
+
+        <input id="sizeInput" type="number" step="0.1">
+
+      </div>
+
+      <hr>
+
+      <h3>Zoom</h3>
+
+      <div class="toolRow">
+
+        <button id="zoomInBtn">+</button>
+        <button id="zoomOutBtn">−</button>
+        <p id="zoomDisplay">100%</p>
+
+      </div>
+
+      <hr>
+
+      <h3>Save / Load</h3>
+
+      <div class="toolRow">
+
+        <button id="savePhotoBtn">Photo</button>
+        <button id="saveBtn">JSON</button>
+        <button id="loadBtn">Load</button>
+
+
+      </div>
+      <div class="databaseSavePanel">
+
+  <button id="saveDatabaseBtn">
+    Save to Database
+  </button>
+
+  <button id="saveAsNewDatabaseBtn">
+    Save as New Scene
+  </button>
+
+  <p class="backendSceneId">
+    Current database scene:
+    <span id="currentBackendScene">
+      Not saved yet
+    </span>
+  </p>
+
+</div>
+      <input type="file" id="loadInput" hidden>
+
+      <hr>
+
+      <h3>Notes</h3>
+      <div id="noteList"></div>
+
+      <h3>Vehicle Data</h3>
+      <div class="vehicleGrid2">
+
+        <label>Name</label>
+        <input id="vehicleName">
+
+        <label>Model</label>
+        <input id="vehicleModel">
+
+        <label>Type</label>
+        <input id="vehicleTypeInput">
+
+        <label>Color</label>
+        <input id="vehicleColor">
+
+        <label>Plate</label>
+        <input id="vehiclePlate">
+
+        <label>Guilty</label>
+        <input type="checkbox" id="vehicleGuilty">
+
+        <label class="fullRow">Comment</label>
+        <textarea id="vehicleComment" class="fullRow"></textarea>
+
+      </div>
+
+      <hr>
+
+      <p id="carInfo">No vehicle selected</p>
+
+    </div>
+  </div>
+<section id="savedScenesPage" hidden>
+
+  <div class="savedScenesHeader">
+
+    <div>
+      <h1>Saved Accident Scenes</h1>
+      <p>
+        Search and open accident reconstructions
+        stored in PostgreSQL.
+      </p>
+    </div>
+
+    <button type="button" id="refreshScenesBtn">
+      Refresh
+    </button>
+
+  </div>
+
+  <div class="savedScenesSearch">
+
+    <input id="sceneSearchInput" type="search" placeholder="Search by accident file name or ID" aria-label="Search accident file name or ID" width="400px"/>
+    <input id="scenePlateInput" type="search" placeholder="Vehicle plate (e.g. SK1234AB)" aria-label="Search vehicle plate">
+    <div class="locationFilter">
+      <input id="sceneLocationSearch" type="search" placeholder="Find a location to filter" aria-label="Find location filter">
+      <select id="sceneLocationFilter" aria-label="Filter by location"><option value="">All locations</option></select>
+      <button id="sceneLocationsMore" type="button" hidden>More locations</button>
+      <span id="sceneLocationMessage" role="status"></span>
+    </div>
+
+    <select id="sceneStatusFilter">
+      <option value="">All statuses</option>
+      <option value="DRAFT">Draft</option>
+      <option value="AI_ANALYZED">
+        AI analyzed
+      </option>
+      <option value="FINALIZED">
+        Finalized
+      </option>
+      <option value="ARCHIVED">
+        Archived
+      </option>
+    </select>
+
+    <button type="button" id="searchScenesBtn">
+      Search
+    </button>
+
+  </div>
+
+  <div id="savedSceneResults"></div>
+
+  <div class="scenePagination">
+
+    <button type="button" id="previousScenesPage">
+      Previous
+    </button>
+
+    <span id="scenesPageInfo">
+      Page 0 of 0
+    </span>
+
+    <button id="nextScenesPage">
+      Next
+    </button>
+
+  </div>
+
+</section>
+<section id="sceneDetailsPage" hidden>
+
+    <div class="sceneDetailsHeader">
+
+        <button
+            type="button"
+            id="backToSavedScenesBtn"
+        >
+            ← Back to Saved Scenes
+        </button>
+
+        <div>
+            <h1 id="sceneDetailsTitle">
+                Accident Scene
+            </h1>
+
+            <p>
+                Complete stored accident-scene information
+            </p>
+        </div>
+
+        <div class="sceneLifecycleActions">
+
+  <button
+      type="button"
+      id="finalizeAccidentSceneBtn"
+      class="finalizeButton"
+  >
+    Finalize Scene
+  </button>
+
+  <button
+      type="button"
+      id="archiveAccidentSceneBtn"
+      class="archiveButton"
+  >
+    Archive Scene
+  </button>
+
+  <button
+      type="button"
+      id="deleteAccidentSceneBtn"
+      class="dangerButton"
+  >
+    Delete Accident Scene
+  </button>
+
+</div>
+
+    </div>
+
+    <div id="sceneDetailsContent">
+        <!-- Filled by saved-scenes.js -->
+    </div>
+
+</section>
+  <section id="savedLocationsPage" class="locationsPage" hidden>
+    <div class="savedScenesHeader"><div><h1>Saved Locations</h1><p>Reusable road layouts and location details for your accident scenes.</p></div>
+      <button id="uploadLocationButton" type="button">Add / Upload Location</button></div>
+    <div class="savedScenesSearch"><input id="locationsSearch" type="search" placeholder="Search locations" aria-label="Search saved locations">
+      <button id="locationsSearchButton" type="button">Search</button></div>
+    <p id="locationsMessage" role="status"></p>
+    <div id="locationResults" class="locationCards"></div>
+    <div class="scenePagination"><button id="locationsPrevious" type="button">Previous</button>
+      <span id="locationsPageInfo"></span><button id="locationsNext" type="button">Next</button></div>
+  </section>
+  <section id="addLocationPage" class="locationsPage" hidden>
+    <h1>Add Location</h1>
+    <p>Save a location before creating an accident. Matching details and photo reuse the existing entry.</p>
+    <form id="locationForm" class="locationForm">
+      <label>Starting template<select id="locationPreset">
+        <option value="">Blank form</option>
+      </select></label>
+      <p class="hint">Template dimensions are starting values. Replace them with the actual location measurements.</p>
+      <div id="locationFormFields" class="locationFormFields"></div>
+      <label>Picture / road layout<input id="locationFormPhoto" type="file" accept="image/png,image/jpeg"></label>
+      <img id="locationFormPreview" class="locationPreview" alt="Selected location picture" hidden>
+      <p id="locationFormMessage" role="status"></p>
+      <button id="submitLocation" type="submit">Save Location</button>
+    </form>
+  </section>
+  <script type="module" src="./app.js"></script>
+
+</body>
+
+</html>

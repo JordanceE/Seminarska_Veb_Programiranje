@@ -8,6 +8,8 @@ interface AccidentSceneSummaryProjection {
     val id: String
     val roadLayoutType: RoadLayoutType
     val name: String?
+    val locationName: String?
+    val locationId: String?
     val status: SceneStatus
     val aiConfidence: Double?
     val createdAt: LocalDateTime

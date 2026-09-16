@@ -14,3 +14,6 @@ data class VehicleId(val value: String = "Vehicle:${UUID.randomUUID()}") {
 data class MeasurementId(val value: String = "Measurement:${UUID.randomUUID()}") {
     override fun toString(): String = value
 }
+data class LocationId(val value: String = "Location:${UUID.randomUUID()}") {
+    override fun toString(): String = value
+}
