@@ -15,6 +15,8 @@ interface AccidentSceneQueryService {
     fun search(
         query: String?,
         status: SceneStatus?,
+        plate: String?,
+        locationId: String?,
         pageable: Pageable
     ): Page<AccidentSceneSummaryResponse>
     fun findById(id: String): AccidentSceneResponse

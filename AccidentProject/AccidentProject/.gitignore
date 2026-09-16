@@ -1,0 +1,25 @@
+# Python virtual environments
+.venv/
+venv/
+
+# Python generated files
+__pycache__/
+*.pyc
+*.pyo
+
+# IntelliJ
+.idea/
+*.iml
+
+# Java/Kotlin build output
+target/
+build/
+.gradle/
+
+# Environment files
+.env
+.env.*
+
+# Operating system files
+.DS_Store
+Thumbs.db

@@ -41,6 +41,8 @@ class AccidentSceneQueryServiceImpl(
     override fun search(
         query: String?,
         status: SceneStatus?,
+        plate: String?,
+        locationId: String?,
         pageable: Pageable
     ): Page<AccidentSceneSummaryResponse> {
         val normalizedQuery = query
@@ -50,6 +52,8 @@ class AccidentSceneQueryServiceImpl(
         return repository.search(
             query = normalizedQuery,
             status = status,
+            plate = plate.orEmpty().lowercase(java.util.Locale.ROOT).replace(" ", "").replace("-", ""),
+            locationId = locationId?.trim().orEmpty(),
             pageable = pageable
         ).map { scene ->
             scene.toSummaryResponse()

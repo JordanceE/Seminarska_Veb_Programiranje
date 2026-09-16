@@ -28,11 +28,16 @@ class AccidentSceneQueryController(
         @RequestParam(required = false)
         status: SceneStatus?,
 
+        @RequestParam(required = false) plate: String?,
+        @RequestParam(required = false) locationId: String?,
+
         pageable: Pageable
     ): Page<AccidentSceneSummaryResponse> {
         return queryService.search(
             query = query,
             status = status,
+            plate = plate,
+            locationId = locationId,
             pageable = pageable
         )
     }

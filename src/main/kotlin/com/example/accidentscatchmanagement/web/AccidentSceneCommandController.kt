@@ -8,11 +8,14 @@ import com.example.accidentscatchmanagement.service.AccidentSceneCommandService
 import com.example.accidentscatchmanagement.web.dto.*
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
+import com.example.accidentscatchmanagement.domain.Location
+import com.example.accidentscatchmanagement.service.LocationService
 
 @RestController
 @RequestMapping("/api/accident-scenes")
 class AccidentSceneCommandController(
-    private val commandService: AccidentSceneCommandService
+    private val commandService: AccidentSceneCommandService,
+    private val locations: LocationService
 ) {
 
     @PostMapping
@@ -24,7 +27,8 @@ class AccidentSceneCommandController(
             CreateAccidentSceneCommand(
                 accidentSceneId = id,
                 roadLayoutType = request.roadLayoutType,
-                locationInfo = request.locationInfo
+                locationId = locations.resolve(request.locationId, request.locationInfo, request.roadLayoutType),
+                fileName = request.fileName
             )
         )
 
@@ -39,9 +43,10 @@ class AccidentSceneCommandController(
             StoreFullSceneCommand(
                 accidentSceneId = id,
                 roadLayoutType = request.roadLayoutType,
-                locationInfo = request.locationInfo,
+                locationId = locations.resolve(request.locationId, request.locationInfo, request.roadLayoutType),
                 vehicles = request.vehicles,
-                measurements = request.measurements
+                measurements = request.measurements,
+                fileName = request.fileName
             )
         )
     }
@@ -63,10 +68,12 @@ class AccidentSceneCommandController(
         @PathVariable id: String,
         @RequestBody request: UpdateSceneLocationRequest
     ) {
+        val locationId = locations.resolve(request.locationId, request.locationInfo)
         commandService.updateLocation(
             UpdateSceneLocationCommand(
                 accidentSceneId = id,
-                locationInfo = request.locationInfo
+                locationId = locationId,
+                roadLayoutType = locationId?.let { locations.get(it).roadLayoutType }
             )
         )
     }
