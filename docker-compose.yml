@@ -18,8 +18,8 @@ services:
 
   accident_ai_service:
     build:
-      context: ./AccidentProject/AccidentProject/accident-ai
-      dockerfile: Dockerfile
+      context: ./AccidentProject/AccidentProject
+      dockerfile: accident-ai/Dockerfile
 
     container_name: accident_ai_service
 

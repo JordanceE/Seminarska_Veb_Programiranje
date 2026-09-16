@@ -7,6 +7,7 @@ import { initAI } from "./ai.js"
 import { initUI } from "./ui.js"
 import { initBackend } from "./backend-api.js"
 import { initSavedScenes } from "./saved-scenes.js"
+import { initLocations } from "./locations.js"
 
 
 const canvas =
@@ -46,12 +47,12 @@ const state = {
     redoStack: [],
 
     backendSceneId: null,
+    fileName: "",
 
     locationData: {
         scene_type:
             "glavnaulica.png",
 
-        file_name: "",
         name: "",
         desc: "",
 
@@ -142,6 +143,7 @@ initSavedScenes(
 )
 
 canvasView.start()
+initLocations(state, backend)
 backend.restoreLastScene()
     .catch(error => {
         console.error(

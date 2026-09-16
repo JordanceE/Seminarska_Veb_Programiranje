@@ -7,6 +7,21 @@ export function initUI(state, { measurements, notes }) {
 function setBackend(value) {
     backend = value
 }
+function setAIMode(enabled) {
+    state.aiMode = Boolean(enabled)
+    $("editModeBtn").textContent = state.aiMode ? "Switch to Edit Mode" : "Switch to AI Mode"
+    $("sceneModeStatus").textContent = state.aiMode ? "Current mode: AI" : "Current mode: Edit"
+    if (state.aiMode) {
+        state.measureMode = false
+        state.currentMeasurement = null
+        $("measureBtn").classList.remove("active")
+    }
+}
+function loadSceneFileName() {
+    $("sceneFileName").value = state.fileName || ""
+}
+$("sceneFileName").oninput = () => { state.fileName = $("sceneFileName").value }
+setAIMode(state.aiMode)
 async function resetScene() {
     if (!backend) {
         alert(
@@ -62,7 +77,9 @@ async function resetScene() {
 
         state.currentMeasurement = null
         state.measureMode = false
-        state.aiMode = false
+        setAIMode(false)
+        state.fileName = ""
+        loadSceneFileName()
 
         state.aiConfidence = null
         state.aiSummary = null
@@ -90,7 +107,6 @@ async function resetScene() {
             scene_type:
                 currentRoadLayout,
 
-            file_name: "",
             name: "",
             desc: "",
 
@@ -118,17 +134,14 @@ async function resetScene() {
             TJunction: false
         }
 
+        state.locationPhotoFile = null
+        const locationPhotoInput = $("editorLocationPhoto")
+        if (locationPhotoInput) locationPhotoInput.value = ""
+        window.dispatchEvent(new Event("location-cleared"))
+
         $("measureBtn").classList.remove(
             "active"
         )
-
-        const editModeButton =
-            $("editModeBtn")
-
-        if (editModeButton) {
-            editModeButton.textContent =
-                "Switch to AI Mode"
-        }
 
         loadLocation()
         refresh()
@@ -234,7 +247,7 @@ $("resetBtn").onclick =
     $("scaleSlider").oninput=()=>{if(state.selectedCar){state.selectedCar.scale=+$("scaleSlider").value;refresh()}};$("sizeInput").oninput=()=>{if(state.selectedCar)state.selectedCar.scale=+$("sizeInput").value*SCALE_REAL/state.selectedCar.width}
     $("zoomInBtn").onclick=()=>{state.worldScale*=1.2;updateZoom()};$("zoomOutBtn").onclick=()=>{state.worldScale*=.8;updateZoom()};$("measureBtn").onclick=()=>{$("measureBtn").classList.toggle("active",state.measureMode=!state.measureMode)}
     const fields={vehicleModel:"model",vehicleTypeInput:"type",vehicleColor:"color",vehiclePlate:"plate",vehicleComment:"comment"};Object.entries(fields).forEach(([id,key])=>$(id).oninput=()=>{if(state.selectedCar)state.selectedCar.vehicleData[key]=$(id).value});$("vehicleName").oninput=()=>{if(state.selectedCar){state.selectedCar.vehicleData.name=$("vehicleName").value;updateVehicleList();notes.updateList()}};$("vehicleGuilty").onchange=()=>{if(state.selectedCar)state.selectedCar.vehicleData.guilty=$("vehicleGuilty").checked}
-    const loc={locFile:["file_name"],locName:["name"],locDesc:["desc"],topWidth:["Top","w",Number],topLane:["Top","lanes",Number],bottomWidth:["Bottom","w",Number],bottomLane:["Bottom","lanes",Number],rightWidth:["Right","w",Number],rightLane:["Right","lanes",Number],leftWidth:["Left","w",Number],leftLane:["Left","lanes",Number],roundDiameter:["Roundabout",null,Number]};Object.entries(loc).forEach(([id,[a,b,cast]])=>$(id).oninput=()=>{const v=cast?cast($(id).value):$(id).value;if(b)state.locationData[a][b]=v;else state.locationData[a]=v});$("tjunctionCheck").onchange=()=>state.locationData.TJunction=$("tjunctionCheck").checked
+    const loc={locName:["name"],locDesc:["desc"],topWidth:["Top","w",Number],topLane:["Top","lanes",Number],bottomWidth:["Bottom","w",Number],bottomLane:["Bottom","lanes",Number],rightWidth:["Right","w",Number],rightLane:["Right","lanes",Number],leftWidth:["Left","w",Number],leftLane:["Left","lanes",Number],roundDiameter:["Roundabout",null,Number]};Object.entries(loc).forEach(([id,[a,b,cast]])=>$(id).oninput=()=>{const v=cast?($(id).value.trim()===""?null:cast($(id).value)):$(id).value;if(b)state.locationData[a][b]=v;else state.locationData[a]=v});$("tjunctionCheck").onchange=()=>state.locationData.TJunction=$("tjunctionCheck").checked
     function loadLocation(){Object.entries(loc).forEach(([id,[a,b]])=>$(id).value=b?state.locationData[a]?.[b]??"":state.locationData[a]??"");$("tjunctionCheck").checked=state.locationData.TJunction;const sceneType=$("sceneType");sceneType.value=state.locationData.scene_type||"glavnaulica.png";sceneType.dispatchEvent(new Event("change"))}
 const remove = async () => {
     const selectedCar =
@@ -303,6 +316,8 @@ $("deleteVehicleBtn").onclick =
     refresh,
     updateZoom,
     loadLocation,
-    setBackend
+    setBackend,
+    setAIMode,
+    loadSceneFileName
 }
 }

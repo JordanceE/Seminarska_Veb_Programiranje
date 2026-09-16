@@ -18,6 +18,7 @@ function setBackend(value) {
     backend = value
 }
     const background=new Image();
+    background.crossOrigin = "anonymous";
     state.background=background
     let animationStarted=false
     let dragging=false,panning=false,panX=0,panY=0,offX=0,offY=0
@@ -118,7 +119,29 @@ state.currentMeasurement = null}}
     state.canvas.onwheel=e=>{e.preventDefault();state.worldScale*=e.deltaY<0?1.1:.9;ui.updateZoom()}
     function animate(){const {ctx,canvas}=state;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.translate(state.cameraOffsetX,state.cameraOffsetY);ctx.scale(state.worldScale,state.worldScale);if(background.complete&&background.naturalWidth>0)ctx.drawImage(background,state.backgroundOffsetX,state.backgroundOffsetY);measurements.draw();state.cars.forEach(c=>c.draw(ctx,{hovered:c===state.hoveredCar,selected:state.selectedCars.includes(c)}));measurements.drawVehicleDistances();notes.drawTooltip();requestAnimationFrame(animate)}
     function fitBackground(){state.canvas.width=state.canvas.parentElement.clientWidth;state.canvas.height=state.canvas.parentElement.clientHeight;const ratio=background.naturalWidth/background.naturalHeight,cr=state.canvas.width/state.canvas.height,w=ratio>cr?state.canvas.width:state.canvas.height*ratio,h=ratio>cr?state.canvas.width/ratio:state.canvas.height;background.naturalDrawWidth=w;background.naturalDrawHeight=h;background.width=w;background.height=h;state.backgroundOffsetX=(state.canvas.width-w)/2;state.backgroundOffsetY=(state.canvas.height-h)/2;notes.updateList();ui.updateZoom();if(!animationStarted){animationStarted=true;animate()}}
-    function loadBackground(fileName){const selected=ROAD_BACKGROUNDS.has(fileName)?fileName:"glavnaulica.png";state.locationData.scene_type=selected;background.src=`assets/${selected}`}
-    function start(){background.onload=fitBackground;background.onerror=()=>alert("Unable to load the selected road image.");const sceneType=document.getElementById("sceneType");sceneType.value=state.locationData.scene_type;sceneType.onchange=()=>loadBackground(sceneType.value);loadBackground(sceneType.value)}
+    function loadBackground(fileName){
+        const selected=ROAD_BACKGROUNDS.has(fileName)?fileName:"glavnaulica.png";
+        state.locationData.scene_type=selected;
+        const source = state.locationData.photoUrl || `assets/${selected}`;
+        if (background.getAttribute("src") !== source) background.src=source;
+    }
+    function start(){
+        background.onload=fitBackground;
+        background.onerror=()=>alert("Unable to load the selected road image.");
+        const sceneType=document.getElementById("sceneType");
+        sceneType.value=state.locationData.scene_type;
+        sceneType.onchange=event=>{
+            if (event.isTrusted) {
+                state.locationData.photoUrl = null;
+                state.locationData.photoSourceLocationId = null;
+                state.locationPhotoFile = null;
+            }
+            loadBackground(sceneType.value);
+        };
+        loadBackground(sceneType.value);
+        new ResizeObserver(() => {
+            if (state.canvas.parentElement.clientWidth && background.naturalWidth) fitBackground();
+        }).observe(state.canvas.parentElement);
+    }
     return {start,loadBackground, setBackend}
 }

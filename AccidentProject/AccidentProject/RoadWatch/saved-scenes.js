@@ -1,3 +1,5 @@
+import { showPage } from "./navigation.js"
+
 export function initSavedScenes(backend) {
     console.log("[Saved Scenes] Initializing...");
 
@@ -19,6 +21,8 @@ export function initSavedScenes(backend) {
         editorTab: document.getElementById("editorTab"),
         savedTab: document.getElementById("savedScenesTab"),
         searchInput: document.getElementById("sceneSearchInput"),
+        plateInput: document.getElementById("scenePlateInput"),
+        locationSelect: document.getElementById("sceneLocationFilter"),
         statusSelect: document.getElementById("sceneStatusFilter"),
         searchButton: document.getElementById("searchScenesBtn"),
         refreshButton: document.getElementById("refreshScenesBtn"),
@@ -64,6 +68,7 @@ deleteSceneButton:
     let viewedScene = null;
 
     function showEditor() {
+    showPage("app", "editorTab");
     elements.editor.hidden = false;
     elements.savedPage.hidden = true;
     elements.detailsPage.hidden = true;
@@ -73,6 +78,7 @@ deleteSceneButton:
 }
 
 async function showSavedScenes(page = 0) {
+    showPage("savedScenesPage", "savedScenesTab");
     elements.editor.hidden = true;
     elements.savedPage.hidden = false;
     elements.detailsPage.hidden = true;
@@ -95,6 +101,8 @@ async function showSavedScenes(page = 0) {
             const result = await backend.searchScenes({
                 query: elements.searchInput.value,
                 status: elements.statusSelect.value,
+                plate: elements.plateInput.value,
+                locationId: elements.locationSelect.value,
                 page,
                 size: 12
             });
@@ -198,6 +206,7 @@ async function showSavedScenes(page = 0) {
             : "Only finalized scenes can be archived"
 }
     async function showSceneDetails(id) {
+    showPage("sceneDetailsPage", "savedScenesTab");
     viewedSceneId = id;
 
     elements.editor.hidden = true;
@@ -254,8 +263,7 @@ function renderSceneDetails(scene) {
         scene.measurements || [];
 
     elements.detailsTitle.textContent =
-        location.name ||
-        scene.name ||
+        scene.fileName ||
         "Unnamed Accident Scene";
 
     const vehicleRows = vehicles.length
@@ -391,6 +399,7 @@ function renderSceneDetails(scene) {
                 <h2>General Information</h2>
 
                 ${detailRow("Scene ID", scene.id)}
+                ${detailRow("Accident file name", scene.fileName || "—")}
 
                 ${detailRow(
                     "Road layout",
@@ -435,11 +444,6 @@ function renderSceneDetails(scene) {
                 ${detailRow(
                     "Name",
                     location.name || "—"
-                )}
-
-                ${detailRow(
-                    "Filename",
-                    location.fileName || "—"
                 )}
 
                 ${detailRow(
@@ -632,8 +636,7 @@ function formatDate(value) {
 
     const title = document.createElement("h3");
     title.textContent =
-        scene.name ||
-        scene.locationInfo?.name ||
+        scene.fileName ||
         "Unnamed accident scene";
 
     const id = document.createElement("code");
@@ -641,6 +644,9 @@ function formatDate(value) {
 
     const details = document.createElement("div");
     details.className = "sceneCardDetails";
+
+    const location = document.createElement("p");
+    location.textContent = `Location: ${scene.locationName || scene.location?.name || "—"}`;
 
     const layout = document.createElement("p");
     layout.innerHTML = `
@@ -688,6 +694,7 @@ function formatDate(value) {
     `;
 
     details.append(
+        location,
         layout,
         status,
         confidence,
@@ -1002,6 +1009,9 @@ function formatDate(value) {
         }
     );
 
+    elements.locationSelect.addEventListener("change", () => loadPage(0));
+    elements.plateInput.addEventListener("keydown", event => { if (event.key === "Enter") loadPage(0) });
+    elements.plateInput.addEventListener("search", () => loadPage(0));
     showEditor();
 
     console.log(

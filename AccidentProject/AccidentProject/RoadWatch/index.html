@@ -16,28 +16,39 @@
   <button id="savedScenesTab" type="button" class="tabButton">
     Saved Accident Scenes
   </button>
+  <button id="savedLocationsTab" type="button" class="tabButton">Saved Locations</button>
+  <button id="addLocationTab" type="button" class="tabButton">Add Location</button>
 </nav>
   <div id="app">
 
     <div id="locationPanel">
 
+      <h3>Accident Scene</h3>
+      <label for="sceneFileName">Accident file name</label>
+      <input id="sceneFileName" maxlength="255" placeholder="scene_01">
+      <p class="hint">Used as this accident's name in Saved Accident Scenes.</p>
+
       <h3>Location</h3>
+      <label for="editorLocationSearch">Find a saved location</label>
+      <input id="editorLocationSearch" type="search" placeholder="Search locations by name">
+      <select id="editorLocationSelect" aria-label="Saved location"><option value="">Enter details manually</option></select>
+      <button id="editorLocationsMore" type="button" hidden>More locations</button>
+      <p id="editorLocationMessage" class="hint" role="status">Choose a location to fill the fields below.</p>
+      <label for="editorLocationPhoto">Location picture (PNG or JPEG)</label>
+      <input id="editorLocationPhoto" type="file" accept="image/png,image/jpeg">
+      <button id="saveLocationFromEditor" type="button">Save location template</button>
+      <button id="clearLocationSelection" type="button">Use edited details as a template</button>
 
       <div class="locationMeta">
 
         <div class="locationMetaRow">
-          <label>File name</label>
-          <input id="locFile" placeholder="scene_01">
-        </div>
-
-        <div class="locationMetaRow">
-          <label>Name</label>
+          <label>Location name</label>
           <input id="locName" placeholder="Leninova intersection">
         </div>
 
         <div class="locationMetaRow">
           <label>Description</label>
-          <textarea id="locDesc" placeholder="Short description of accident scene"></textarea>
+          <textarea id="locDesc" placeholder="Short description of the location"></textarea>
         </div>
 
       </div>
@@ -133,7 +144,8 @@
       </label>
       <button id="analyzeBtn" class="aiBtn aiAnalyze">Analyze with AI</button>
       <button id="downloadAIJsonBtn" class="aiBtn aiDownload">Преземи AI JSON</button>
-      <button id="editModeBtn" class="aiBtn aiEdit">Switch to Edit Mode</button>
+      <button id="editModeBtn" class="aiBtn aiEdit">Switch to AI Mode</button>
+      <p id="sceneModeStatus" class="hint" role="status">Current mode: Edit</p>
 
       <div id="aiPreviewContainer">
         <img id="aiPreview" />
@@ -314,7 +326,14 @@
 
   <div class="savedScenesSearch">
 
-    <input id="sceneSearchInput" type="text" placeholder="Search by name, filename, description or ID" width="400px"/>
+    <input id="sceneSearchInput" type="search" placeholder="Search by accident file name or ID" aria-label="Search accident file name or ID" width="400px"/>
+    <input id="scenePlateInput" type="search" placeholder="Vehicle plate (e.g. SK1234AB)" aria-label="Search vehicle plate">
+    <div class="locationFilter">
+      <input id="sceneLocationSearch" type="search" placeholder="Find a location to filter" aria-label="Find location filter">
+      <select id="sceneLocationFilter" aria-label="Filter by location"><option value="">All locations</option></select>
+      <button id="sceneLocationsMore" type="button" hidden>More locations</button>
+      <span id="sceneLocationMessage" role="status"></span>
+    </div>
 
     <select id="sceneStatusFilter">
       <option value="">All statuses</option>
@@ -411,6 +430,31 @@
     </div>
 
 </section>
+  <section id="savedLocationsPage" class="locationsPage" hidden>
+    <div class="savedScenesHeader"><div><h1>Saved Locations</h1><p>Reusable road layouts and location details for your accident scenes.</p></div>
+      <button id="uploadLocationButton" type="button">Add / Upload Location</button></div>
+    <div class="savedScenesSearch"><input id="locationsSearch" type="search" placeholder="Search locations" aria-label="Search saved locations">
+      <button id="locationsSearchButton" type="button">Search</button></div>
+    <p id="locationsMessage" role="status"></p>
+    <div id="locationResults" class="locationCards"></div>
+    <div class="scenePagination"><button id="locationsPrevious" type="button">Previous</button>
+      <span id="locationsPageInfo"></span><button id="locationsNext" type="button">Next</button></div>
+  </section>
+  <section id="addLocationPage" class="locationsPage" hidden>
+    <h1>Add Location</h1>
+    <p>Save a location before creating an accident. Matching details and photo reuse the existing entry.</p>
+    <form id="locationForm" class="locationForm">
+      <label>Starting template<select id="locationPreset">
+        <option value="">Blank form</option>
+      </select></label>
+      <p class="hint">Template dimensions are starting values. Replace them with the actual location measurements.</p>
+      <div id="locationFormFields" class="locationFormFields"></div>
+      <label>Picture / road layout<input id="locationFormPhoto" type="file" accept="image/png,image/jpeg"></label>
+      <img id="locationFormPreview" class="locationPreview" alt="Selected location picture" hidden>
+      <p id="locationFormMessage" role="status"></p>
+      <button id="submitLocation" type="submit">Save Location</button>
+    </form>
+  </section>
   <script type="module" src="./app.js"></script>
 
 </body>

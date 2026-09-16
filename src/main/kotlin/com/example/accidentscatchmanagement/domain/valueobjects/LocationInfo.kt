@@ -1,8 +1,7 @@
 package com.example.accidentscatchmanagement.domain.valueobjects
 
-import jakarta.persistence.Embeddable
-
-@Embeddable
+// Legacy payload type retained for compatibility with older scene exports/events.
+// Current scenes persist their reusable location through the Location entity.
 data class LocationInfo(
     var fileName: String? = null,
     var name: String? = null,

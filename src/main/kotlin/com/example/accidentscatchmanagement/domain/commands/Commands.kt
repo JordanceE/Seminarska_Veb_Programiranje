@@ -7,12 +7,16 @@ import com.example.accidentscatchmanagement.domain.valueobjects.LocationInfo
 import com.example.accidentscatchmanagement.domain.valueobjects.MeasurementLine
 import com.example.accidentscatchmanagement.domain.valueobjects.VehiclePlacement
 import org.axonframework.modelling.command.TargetAggregateIdentifier
+import com.example.accidentscatchmanagement.domain.Location
+import com.example.accidentscatchmanagement.domain.ids.AccidentSceneId
+import com.example.accidentscatchmanagement.domain.ids.LocationId
 
 data class CreateAccidentSceneCommand(
     @TargetAggregateIdentifier
     val accidentSceneId: String,
     val roadLayoutType: RoadLayoutType,
-    val locationInfo: LocationInfo
+    val locationId: String?,
+    val fileName: String? = null
 )
 
 data class ChangeRoadLayoutCommand(
@@ -24,14 +28,16 @@ data class StoreFullSceneCommand(
     @TargetAggregateIdentifier
     val accidentSceneId: String,
     val roadLayoutType: RoadLayoutType,
-    val locationInfo: LocationInfo,
+    val locationId: String?,
     val vehicles: List<VehiclePlacement>,
-    val measurements: List<MeasurementLine> = emptyList()
+    val measurements: List<MeasurementLine> = emptyList(),
+    val fileName: String? = null
 )
 data class UpdateSceneLocationCommand(
     @TargetAggregateIdentifier
     val accidentSceneId: String,
-    val locationInfo: LocationInfo
+    val locationId: String?,
+    val roadLayoutType: RoadLayoutType? = null
 )
 
 data class AddVehicleCommand(

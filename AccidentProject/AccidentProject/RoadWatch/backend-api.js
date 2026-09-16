@@ -1,7 +1,8 @@
-const API_BASE =
-    "http://localhost:8080/api/accident-scenes"
+export const API_ORIGIN = `${window.location.protocol}//${window.location.hostname}:8080`
+const API_BASE = `${API_ORIGIN}/api/accident-scenes`
+const LOCATIONS_BASE = `${API_ORIGIN}/api/locations`
 
-const ROAD_LAYOUT_TO_BACKEND = {
+export const ROAD_LAYOUT_TO_BACKEND = {
     "glavnaulica.png":
         "INTERSECTION",
 
@@ -118,13 +119,14 @@ function toNullableNumber(value) {
         : null
 }
 
-function toBackendLocation(location) {
+export function toBackendLocation(location) {
     return {
-        fileName:
-            location.file_name || null,
-
         name:
-            location.name || null,
+            location.name || "",
+
+        roadLayoutType: ROAD_LAYOUT_TO_BACKEND[location.scene_type] || "INTERSECTION",
+        backgroundFileName: location.scene_type || "glavnaulica.png",
+        photoSourceLocationId: location.photoSourceLocationId || null,
 
         description:
             location.desc || null,
@@ -164,11 +166,12 @@ function toBackendLocation(location) {
 function fromBackendLocation(location, roadLayoutType) {
     return {
         scene_type:
+            location?.backgroundFileName ||
             ROAD_LAYOUT_TO_FRONTEND[roadLayoutType] ||
             "glavnaulica.png",
 
-        file_name:
-            location?.fileName || "",
+        photoUrl: location?.photoUrl ? new URL(location.photoUrl, API_ORIGIN).href : null,
+        photoSourceLocationId: location?.photoUrl ? location.id : null,
 
         name:
             location?.name || "",
@@ -446,23 +449,87 @@ export function initBackend(
         updateSceneIdDisplay()
     }
 
-    function currentCreateRequest() {
-        return {
-            roadLayoutType:
-                ROAD_LAYOUT_TO_BACKEND[
-                    state.locationData.scene_type
-                ] || "INTERSECTION",
-
-            locationInfo:
-                toBackendLocation(
-                    state.locationData
-                )
-        }
+    function applyLocation(location) {
+        state.locationData = fromBackendLocation(location, location.roadLayoutType)
+        state.locationData.locationId = location.id
+        state.locationData.templateSignature = JSON.stringify(toBackendLocation(state.locationData))
+        state.locationPhotoFile = null
+        const photoInput = document.getElementById("editorLocationPhoto")
+        if (photoInput) photoInput.value = ""
+        ui.loadLocation()
+        window.dispatchEvent(new CustomEvent("location-selected", { detail: location }))
     }
 
-    function currentFullSceneRequest() {
+    async function searchLocations({ query = "", page = 0, size = 20 } = {}) {
+        return request(`${LOCATIONS_BASE}?${new URLSearchParams({ query, page, size, sort: "name,asc" })}`)
+    }
+
+    async function getLocation(id) {
+        return request(`${LOCATIONS_BASE}/${encodeURIComponent(id)}`)
+    }
+
+    async function deleteLocation(id) {
+        await request(`${LOCATIONS_BASE}/${encodeURIComponent(id)}`, { method: "DELETE" })
+        const selected = state.locationData.locationId === id
+        if (selected) {
+            delete state.locationData.locationId
+            delete state.locationData.templateSignature
+        }
+        if (state.locationData.photoSourceLocationId === id) {
+            delete state.locationData.photoSourceLocationId
+            delete state.locationData.photoUrl
+            delete state.locationData.templateSignature
+            ui.loadLocation()
+        }
+        if (selected) window.dispatchEvent(new Event("location-cleared"))
+        window.dispatchEvent(new CustomEvent("location-deleted", { detail: { id } }))
+        window.dispatchEvent(new Event("locations-changed"))
+    }
+
+    async function saveLocation(input, photo = null) {
+        const options = { method: "POST" }
+        if (photo) {
+            const form = new FormData()
+            form.append("location", new Blob([JSON.stringify(input)], { type: "application/json" }))
+            form.append("photo", photo)
+            options.body = form
+        } else {
+            options.headers = { "Content-Type": "application/json" }
+            options.body = JSON.stringify(input)
+        }
+        const result = await request(LOCATIONS_BASE, options)
+        window.dispatchEvent(new Event("locations-changed"))
+        return result
+    }
+
+    async function saveEditorLocation() {
+        const input = toBackendLocation(state.locationData)
+        if (state.locationPhotoFile) input.photoSourceLocationId = null
+        const result = await saveLocation(input, state.locationPhotoFile)
+        applyLocation(result)
+        return result
+    }
+
+    async function currentCreateRequest() {
+        if (state.locationPhotoFile) await saveEditorLocation()
+        const fileName = (state.fileName || "").trim()
+        const input = toBackendLocation(state.locationData)
+        const roadLayoutType = input.roadLayoutType
+        if (state.locationData.locationId &&
+            state.locationData.templateSignature === JSON.stringify(input)) {
+            return { roadLayoutType, fileName, locationId: state.locationData.locationId }
+        }
+        const hasDetails = Object.entries(input).some(([key, value]) =>
+            !["roadLayoutType", "backgroundFileName", "tJunction"].includes(key) &&
+            value !== null && value !== "") || input.tJunction
+        if (!hasDetails) return { roadLayoutType, fileName, locationId: null }
+        if (!input.name.trim()) throw new Error("Enter a location name before saving its details.")
+        return { roadLayoutType, fileName, locationInfo: input }
+    }
+
+    async function currentFullSceneRequest() {
         return {
-            ...currentCreateRequest(),
+            ...await currentCreateRequest(),
 
             vehicles:
                 state.cars.map(
@@ -480,7 +547,15 @@ export function initBackend(
         }
     }
 
+    let pendingCreation = null
     async function createScene() {
+        if (pendingCreation) return pendingCreation
+        pendingCreation = performCreateScene()
+        try { return await pendingCreation }
+        finally { pendingCreation = null }
+    }
+
+    async function performCreateScene() {
         const result = await request(
             API_BASE,
             {
@@ -492,7 +567,7 @@ export function initBackend(
                 },
 
                 body: JSON.stringify(
-                    currentCreateRequest()
+                    await currentCreateRequest()
                 )
             }
         )
@@ -507,6 +582,9 @@ export function initBackend(
             state.backendSceneId ||
             await createScene()
 
+        const payload = await currentFullSceneRequest()
+        const locationSignature = JSON.stringify(toBackendLocation(state.locationData))
+
         await request(
             `${API_BASE}/${encodeURIComponent(id)}/full-scene`,
             {
@@ -518,12 +596,19 @@ export function initBackend(
                 },
 
                 body: JSON.stringify(
-                    currentFullSceneRequest()
+                    payload
                 )
             }
         )
 
         storeCurrentId(id)
+
+        // Adopt the resolved template ID without replacing vehicles being edited.
+        const saved = await getScene(id)
+        if (saved.location && locationSignature === JSON.stringify(toBackendLocation(state.locationData))) {
+            applyLocation(saved.location)
+        }
+        window.dispatchEvent(new Event("locations-changed"))
 
         return id
     }
@@ -570,6 +655,9 @@ export function initBackend(
 }
 
     function applyScene(scene) {
+        state.fileName = scene.fileName ?? ""
+        ui.loadSceneFileName()
+        ui.setAIMode(false)
          state.aiConfidence =
         scene.aiConfidence ?? null;
 
@@ -640,9 +728,18 @@ export function initBackend(
 
         state.locationData =
             fromBackendLocation(
-                scene.locationInfo,
+                scene.location || scene.locationInfo,
                 scene.roadLayoutType
             )
+
+        state.locationPhotoFile = null
+        const photoInput = document.getElementById("editorLocationPhoto")
+        if (photoInput) photoInput.value = ""
+        if (scene.location) {
+            state.locationData.locationId = scene.location.id
+            state.locationData.templateSignature = JSON.stringify(toBackendLocation(state.locationData))
+            window.dispatchEvent(new CustomEvent("location-selected", { detail: scene.location }))
+        } else window.dispatchEvent(new Event("location-cleared"))
 
         state.cars =
             cars
@@ -695,6 +792,8 @@ export function initBackend(
     async function searchScenes({
         query = "",
         status = "",
+        plate = "",
+        locationId = "",
         page = 0,
         size = 12
     } = {}) {
@@ -703,6 +802,8 @@ export function initBackend(
 
         params.set("page", String(page))
         params.set("size", String(size))
+        if (plate.trim()) params.set("plate", plate.trim())
+        if (locationId) params.set("locationId", locationId)
         params.append(
             "sort",
             "updatedAt,desc"
@@ -894,6 +995,12 @@ async function archiveScene(sceneId) {
     updateSceneIdDisplay()
 
     return {
+    searchLocations,
+    getLocation,
+    deleteLocation,
+    saveLocation,
+    saveEditorLocation,
+    applyLocation,
     saveCurrentScene,
     saveAsNewScene,
     loadScene,

@@ -20,7 +20,7 @@ import java.time.LocalDateTime
 
 @Aggregate(repository = "axonAccidentSceneRepository")
 @Entity
-@Table(name = "accident_scene")
+@Table(name = "accident_scene", indexes = [Index(name = "idx_scene_location", columnList = "location_id")])
 class AccidentScene {
 
     @AggregateIdentifier
@@ -30,8 +30,19 @@ class AccidentScene {
     @Enumerated(EnumType.STRING)
     lateinit var roadLayoutType: RoadLayoutType
 
-    @Embedded
-    var locationInfo: LocationInfo = LocationInfo()
+    @Column(name = "file_name", length = 255)
+    var fileName: String? = null
+
+    @Column(name = "location_id")
+    var locationId: String? = null
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "location_id",
+        insertable = false,
+        updatable = false
+    )
+    var location: Location? = null
 
     @Enumerated(EnumType.STRING)
     lateinit var status: SceneStatus
@@ -66,7 +77,8 @@ class AccidentScene {
             AccidentSceneCreatedEvent(
                 accidentSceneId = command.accidentSceneId,
                 roadLayoutType = command.roadLayoutType,
-                locationInfo = command.locationInfo
+                locationId = command.locationId,
+                fileName = normalizedFileName(command.fileName),
             )
         )
     }
@@ -88,7 +100,8 @@ class AccidentScene {
         apply(
             SceneLocationUpdatedEvent(
                 accidentSceneId = command.accidentSceneId,
-                locationInfo = command.locationInfo
+                locationId = command.locationId,
+                roadLayoutType = command.roadLayoutType
             )
         )
     }
@@ -170,17 +183,19 @@ class AccidentScene {
             FullSceneStoredEvent(
                 accidentSceneId = command.accidentSceneId,
                 roadLayoutType = command.roadLayoutType,
-                locationInfo = command.locationInfo,
+                locationId = command.locationId,
                 vehicles = command.vehicles,
-                measurements = command.measurements
+                measurements = command.measurements,
+                fileName = normalizedFileName(command.fileName ?: fileName) ?: ""
             )
         )
     }
 
     @EventSourcingHandler
     fun on(event: FullSceneStoredEvent) {
+        event.fileName?.let { fileName = normalizedFileName(it) }
         roadLayoutType = event.roadLayoutType
-        locationInfo = event.locationInfo
+        locationId = event.locationId
         vehicles.clear()
         vehicles.addAll(event.vehicles)
         measurements.clear()
@@ -311,6 +326,9 @@ class AccidentScene {
         require(vehicles.isNotEmpty()) {
             "Cannot finalize an accident scene without vehicles"
         }
+        require(locationId != null) {
+            "Cannot finalize an accident scene without a location"
+        }
 
         apply(
             AccidentSceneFinalizedEvent(
@@ -335,8 +353,9 @@ class AccidentScene {
     @EventSourcingHandler
     fun on(event: AccidentSceneCreatedEvent) {
         id = event.accidentSceneId
+        fileName = event.fileName
         roadLayoutType = event.roadLayoutType
-        locationInfo = event.locationInfo
+        locationId = event.locationId
         status = SceneStatus.DRAFT
         createdAt = event.occurredAt
         updatedAt = event.occurredAt
@@ -350,7 +369,8 @@ class AccidentScene {
 
     @EventSourcingHandler
     fun on(event: SceneLocationUpdatedEvent) {
-        locationInfo = event.locationInfo
+        locationId = event.locationId
+        event.roadLayoutType?.let { roadLayoutType = it }
         updatedAt = event.occurredAt
     }
 
@@ -433,6 +453,12 @@ class AccidentScene {
     fun on(event: AccidentSceneArchivedEvent) {
         status = SceneStatus.ARCHIVED
         updatedAt = event.occurredAt
+    }
+
+    private fun normalizedFileName(value: String?): String? {
+        val name = value?.trim()?.takeIf { it.isNotEmpty() }
+        require(name == null || name.length <= 255) { "Accident file name must be at most 255 characters" }
+        return name
     }
 
     private fun ensureEditable() {

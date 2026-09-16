@@ -108,6 +108,7 @@ export function initAI(
                 "Analyzing..."
 
             button.disabled = true
+            editButton.disabled = true
 
             button.classList.add(
                 "aiAnalyzing"
@@ -118,7 +119,7 @@ export function initAI(
                     await backend
                         .analyzeImage(file)
 
-                state.aiMode = true
+                ui.setAIMode(true)
 
                 ui.refresh()
 
@@ -143,6 +144,7 @@ export function initAI(
                     originalText
 
                 button.disabled = false
+                editButton.disabled = false
 
                 button.classList.remove(
                     "aiAnalyzing"
@@ -157,13 +159,8 @@ export function initAI(
 
     editButton.onclick =
         () => {
-            state.aiMode =
-                !state.aiMode
-
-            editButton.textContent =
-                state.aiMode
-                    ? "Switch to Edit Mode"
-                    : "Switch to AI Mode"
+            ui.setAIMode(!state.aiMode)
+            ui.refresh()
 
             popup(
                 state.aiMode

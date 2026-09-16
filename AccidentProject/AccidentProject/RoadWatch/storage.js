@@ -1,5 +1,6 @@
 export function initStorage(state, { ui, notes, backend }) {
     const sceneData = () => ({
+        fileName: state.fileName || "",
         location: state.locationData,
         cars: state.cars,
         measurements: state.measurements,
@@ -81,6 +82,10 @@ saveAsNewButton.onclick =
         if (!data || typeof data !== "object" || Array.isArray(data)) {
             return "Invalid scene file: expected a JSON object."
         }
+        const fileName = data.fileName ?? data.location?.file_name ?? data.location?.fileName
+        if (fileName != null && (typeof fileName !== "string" || fileName.length > 255)) {
+            return "Invalid scene file: fileName must be text with at most 255 characters."
+        }
         if (!data.cars || !Array.isArray(data.cars)) {
             return "Invalid scene file: missing cars array."
         }
@@ -117,15 +122,20 @@ saveAsNewButton.onclick =
         return null
     }
 
+    const exportName = extension => {
+        const name = (state.fileName || "scene").trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
+            .replace(/\.(json|png)$/i, "") || "scene"
+        return `${name}.${extension}`
+    }
     document.getElementById("saveBtn").onclick = () =>
-        download("scene.json", "application/json", JSON.stringify(sceneData(), null, 2))
+        download(exportName("json"), "application/json", JSON.stringify(sceneData(), null, 2))
 
     document.getElementById("downloadAIJsonBtn").onclick = () =>
-        download("ai_scene.json", "application/json", JSON.stringify(sceneData(), null, 2))
+        download(exportName("json"), "application/json", JSON.stringify(sceneData(), null, 2))
 
     document.getElementById("savePhotoBtn").onclick = () => {
         const link = document.createElement("a")
-        link.download = "scene.png"
+        link.download = exportName("png")
         link.href = state.canvas.toDataURL("image/png")
         link.click()
     }
@@ -151,7 +161,12 @@ saveAsNewButton.onclick =
                     Object.assign(state.newCar(car.vehicleData.type), car)
                 )
 
-                state.locationData = data.location || state.locationData
+                state.fileName = data.fileName ?? data.location?.file_name ?? data.location?.fileName ?? ""
+                state.locationData = { ...(data.location || state.locationData) }
+                delete state.locationData.file_name
+                delete state.locationData.fileName
+                ui.loadSceneFileName()
+                ui.setAIMode(false)
                 state.measurements = (data.measurements || []).map(measurement => {
                     const legacyVehicleName = measurement.fromVehicleName || measurement.from || null
                     const sourceCar = loadedCars.find(car =>
